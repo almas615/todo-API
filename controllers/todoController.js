@@ -16,21 +16,40 @@ const list = (req, res) => {
   })
     .then((activities) => {
       res.json({
-        total: activities.count,
-        limit,
-        skip: offset,
+        status: 'Success',
         data: activities.rows,
       });
     });
 };
 
 const create = (req, res) => {
+  // req.body.title must not be null
+  if (!req.body.title) {
+    res.status(400).json({
+      status: 'Bad Request',
+      message: 'title cannot be null',
+    });
+    return;
+  }
+  if (!req.body.activity_group_id) {
+    res.status(400).json({
+      status: 'Bad Request',
+      message: 'activity_group_id cannot be null',
+    });
+    return;
+  }
   Todo.create({
     activity_group_id: req.body.activity_group_id,
     title: req.body.title,
   })
-    .then((todo) => res.status(200).json(todo))
-    .catch((err) => res.status(400).json(err));
+    .then((todo) => res.status(201).json({
+      status: 'Success',
+      data: {
+        title: todo.title,
+        activity_group_id: todo.activity_group_id,
+      },
+    }))
+    .catch((err) => res.status(404).json(err));
 };
 
 const detail = async (req, res) => {
@@ -42,14 +61,17 @@ const detail = async (req, res) => {
   });
   if (!todo) {
     return res.status(404).json({
-      name: 'NotFound',
-      message: `No record found for id '${req.params.id}'`,
-      code: 404,
-      className: 'not-found',
-      errors: {},
+      status: 'Not Found',
+      message: `Todo with ID ${req.params.id} Not Found`,
     });
   }
-  return res.status(200).json(todo);
+  return res.status(200).json({
+    status: 'Success',
+    data: {
+      title: todo.title,
+      priority: todo.priority,
+    },
+  });
 };
 
 const remove = async (req, res) => {
@@ -66,15 +88,14 @@ const remove = async (req, res) => {
     });
     if (!todo) {
       return res.status(404).json({
-        name: 'NotFound',
-        message: `No record found for id '${id}'`,
-        code: 404,
-        className: 'not-found',
-        errors: {},
+        status: 'Not Found',
+        message: `Todo with ID ${req.params.id} Not Found`,
       });
     }
     return res.status(200).json({
-      todo,
+      status: 'Success',
+      data: {
+      },
     });
   } catch (err) {
     return res.status(400).json({
@@ -91,11 +112,8 @@ const update = async (req, res) => {
   const todo = await Todo.findByPk(req.params.id);
   if (!todo) {
     return res.status(404).json({
-      name: 'NotFound',
-      message: `No record found for id '${req.params.id}'`,
-      code: 404,
-      className: 'not-found',
-      errors: {},
+      status: 'Not Found',
+      message: `Todo with ID ${req.params.id} Not Found`,
     });
   }
   try {
@@ -104,7 +122,14 @@ const update = async (req, res) => {
       is_active: req.body.is_active,
       priority: req.body.priority,
     });
-    return res.status(200).json(updateTodo);
+    return res.status(200).json({
+      status: 'Success',
+      data: {
+        title: updateTodo.title,
+        is_active: updateTodo.is_active,
+        priority: updateTodo.priority,
+      },
+    });
   } catch (err) {
     return res.status(400).json({
       name: 'GeneralError',

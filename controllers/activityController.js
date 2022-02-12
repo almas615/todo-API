@@ -17,20 +17,33 @@ const list = (req, res) => {
   })
     .then((activities) => {
       res.json({
-        total: activities.count,
-        limit,
-        skip: offset,
-        data: activities.rows,
+        status: 'Success',
+        data: activities,
       });
     });
 };
 
 const create = (req, res) => {
+  // req.body.title must not be null
+  if (!req.body.title) {
+    res.status(400).json({
+      status: 'Bad Request',
+      message: 'title cannot be null',
+    });
+    return;
+  }
   Activity.create({
+    id: req.body.id || null,
     title: req.body.title,
     email: req.body.email,
   })
-    .then((a) => res.status(200).json(a))
+    .then((a) => res.status(201).json({
+      status: 'Success',
+      data: {
+        title: a.title,
+        email: a.email,
+      },
+    }))
     .catch((err) => res.status(400).json(err));
 };
 
@@ -48,14 +61,17 @@ const detail = async (req, res) => {
   });
   if (!activity) {
     return res.status(404).json({
-      name: 'NotFound',
-      message: `No record found for id '${req.params.id}'`,
-      code: 404,
-      className: 'not-found',
-      errors: {},
+      status: 'Not Found',
+      message: `Activity with ID ${req.params.id} Not Found`,
     });
   }
-  return res.status(200).json(activity);
+  return res.status(200).json({
+    status: 'Success',
+    data: {
+      id: activity.id,
+      title: activity.title,
+    },
+  });
 };
 
 const remove = async (req, res) => {
@@ -69,47 +85,47 @@ const remove = async (req, res) => {
       where: {
         id,
       },
-      returning: true,
     });
     if (!activity) {
       return res.status(404).json({
-        name: 'NotFound',
-        message: `No record found for id '${id}'`,
-        code: 404,
-        className: 'not-found',
-        errors: {},
+        status: 'Not Found',
+        message: `Activity with ID ${req.params.id} Not Found`,
       });
     }
     return res.status(200).json({
-      activity,
+      status: 'Success',
+      data: {},
     });
   } catch (err) {
     return res.status(500).json({
-      name: 'InternalServerError',
-      message: err.message,
-      code: 500,
-      className: 'internal-server-error',
-      errors: {},
+      status: 'Internal Server Error',
+      message: err,
     });
   }
 };
 
+// eslint-disable-next-line consistent-return
 const update = async (req, res) => {
   const activity = await Activity.findByPk(req.params.id);
   if (!activity) {
     return res.status(404).json({
-      name: 'NotFound',
-      message: `No record found for id '${req.params.id}'`,
-      code: 404,
-      className: 'not-found',
-      errors: {},
+      status: 'Not Found',
+      message: `Activity with ID ${req.params.id} Not Found`,
     });
   }
   try {
     const updatedActivity = await activity.update({
       title: req.body.title,
     });
-    return res.status(200).json(updatedActivity);
+    if (updatedActivity) {
+      return res.status(200).json({
+        status: 'Success',
+        data: {
+          id: updatedActivity.id,
+          title: updatedActivity.title,
+        },
+      });
+    }
   } catch (err) {
     return res.status(400).json(err);
   }
