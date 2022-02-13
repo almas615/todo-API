@@ -9,18 +9,13 @@ module.exports = (sequelize, DataTypes) => {
      * This method is not a part of Sequelize lifecycle.
      * The `models/index` file will call this method automatically.
      */
-    static associate(models) {
+    static associate() {
       // define association here
-      this.belongsTo(models.Activity, {
-        foreignKey: 'activity_group_id',
-        key: 'id',
-        as: 'activity',
-      });
     }
   }
   Todo.init({
     title: DataTypes.STRING,
-    activity_group_id: DataTypes.INTEGER,
+    activity_group_id: DataTypes.STRING,
     is_active: {
       type: DataTypes.BOOLEAN,
       defaultValue: true,

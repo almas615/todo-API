@@ -11,11 +11,7 @@ module.exports = {
         type: Sequelize.STRING,
       },
       activity_group_id: {
-        type: Sequelize.INTEGER,
-        reference: {
-          model: 'activities',
-          key: 'id',
-        },
+        type: Sequelize.STRING,
       },
       is_active: {
         type: Sequelize.BOOLEAN,

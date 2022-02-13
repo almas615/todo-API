@@ -1,88 +1,89 @@
-const Sequelize = require('sequelize');
 const { Todo } = require('../models/index');
 
-const { Op } = Sequelize;
-
-const list = (req, res) => {
-  const limit = req.query.limit || 1000;
-  const offset = req.query.offset || 0;
-  Todo.findAndCountAll({
-    where: {
-      activity_group_id: req.query.activity_group_id || { [Op.not]: null },
-    },
-    limit,
-    offset,
-    attributes: ['id', 'title', 'created_at'],
-  })
-    .then((activities) => {
-      res.json({
-        total: activities.count,
-        limit,
-        skip: offset,
-        data: activities.rows,
-      });
+const list = async (req, res) => {
+  let todo = [];
+  // if req.query.activity_group_id is not null find all todos with activity_group_id
+  if (req.query.activity_group_id) {
+    todo = await Todo.findAll({
+      where: {
+        activity_group_id: req.query.activity_group_id,
+      },
     });
+  } else {
+    todo = await Todo.findAll();
+  }
+  if (todo) {
+    res.json({
+      status: 'Success',
+      message: 'Success',
+      data: todo,
+    });
+  }
 };
 
 const create = (req, res) => {
-  Todo.create({
-    activity_group_id: req.body.activity_group_id,
-    title: req.body.title,
-  })
-    .then((todo) => res.status(200).json(todo))
-    .catch((err) => res.status(400).json(err));
+  // req.body.title must not be null
+  if (!req.body.title) {
+    res.status(400).json({
+      status: 'Bad Request',
+      message: 'title cannot be null',
+    });
+    return;
+  }
+  if (!req.body.activity_group_id) {
+    res.status(400).json({
+      status: 'Bad Request',
+      message: 'activity_group_id cannot be null',
+    });
+    return;
+  }
+  Todo.create(req.body)
+    .then((todo) => res.status(201).json({
+      status: 'Success',
+      message: 'Success',
+      data: todo,
+    }))
+    .catch((err) => res.status(404).json(err));
 };
 
 const detail = async (req, res) => {
-  const todo = await Todo.findOne({
-    where: {
-      id: req.params.id,
-    },
-    attributes: ['id', 'title', 'is_active', 'priority'],
-  });
+  const todo = await Todo.findByPk(req.params.id);
   if (!todo) {
     return res.status(404).json({
-      name: 'NotFound',
-      message: `No record found for id '${req.params.id}'`,
-      code: 404,
-      className: 'not-found',
-      errors: {},
+      status: 'Not Found',
+      message: `Todo with ID ${req.params.id} Not Found`,
     });
   }
-  return res.status(200).json(todo);
+  return res.status(200).json({
+    status: 'Success',
+    message: 'Success',
+    data: todo,
+  });
 };
 
 const remove = async (req, res) => {
-  let { id } = req.params;
-  if (req.query.id) {
-    const queryId = req.query.id;
-    id = queryId.split(',');
-  }
   try {
     const todo = await Todo.destroy({
       where: {
-        id,
+        id: req.params.id,
       },
     });
     if (!todo) {
       return res.status(404).json({
-        name: 'NotFound',
-        message: `No record found for id '${id}'`,
-        code: 404,
-        className: 'not-found',
-        errors: {},
+        status: 'Not Found',
+        message: `Todo with ID ${req.params.id} Not Found`,
       });
     }
     return res.status(200).json({
-      todo,
+      status: 'Success',
+      message: 'Success',
+      data: {
+      },
     });
   } catch (err) {
     return res.status(400).json({
-      name: 'InternalServerError',
-      message: err.message,
-      code: 500,
-      className: 'internal-server-error',
-      errors: {},
+      status: 'error',
+      message: 'Internal Server Error',
     });
   }
 };
@@ -91,27 +92,22 @@ const update = async (req, res) => {
   const todo = await Todo.findByPk(req.params.id);
   if (!todo) {
     return res.status(404).json({
-      name: 'NotFound',
-      message: `No record found for id '${req.params.id}'`,
-      code: 404,
-      className: 'not-found',
-      errors: {},
+      status: 'Not Found',
+      message: `Todo with ID ${req.params.id} Not Found`,
+      data: {},
     });
   }
   try {
-    const updateTodo = await todo.update({
-      title: req.body.title,
-      is_active: req.body.is_active,
-      priority: req.body.priority,
+    const updateTodo = await todo.update(req.body);
+    return res.status(200).json({
+      status: 'Success',
+      message: 'Success',
+      data: updateTodo,
     });
-    return res.status(200).json(updateTodo);
   } catch (err) {
-    return res.status(400).json({
-      name: 'GeneralError',
-      message: err.message,
-      code: 500,
-      className: 'general-error',
-      errors: {},
+    return res.status(500).json({
+      status: 'Error',
+      message: 'Internal Server Error',
     });
   }
 };
