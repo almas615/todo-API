@@ -1,23 +1,11 @@
-// eslint-disable-next-line import/no-unresolved
-const Sequelize = require('sequelize');
-
-const { Op } = Sequelize;
-const { Activity, Todo } = require('../models/index');
+const { Activity } = require('../models/index');
 
 const list = (req, res) => {
-  const limit = req.query.limit || 1000;
-  const offset = req.query.offset || 0;
-  Activity.findAndCountAll({
-    where: {
-      email: req.query.email || { [Op.not]: null },
-    },
-    limit,
-    offset,
-    attributes: ['id', 'title', 'created_at'],
-  })
+  Activity.findAll()
     .then((activities) => {
       res.json({
         status: 'Success',
+        message: 'Success',
         data: activities,
       });
     });
@@ -32,33 +20,17 @@ const create = (req, res) => {
     });
     return;
   }
-  Activity.create({
-    id: req.body.id || null,
-    title: req.body.title,
-    email: req.body.email,
-  })
-    .then((a) => res.status(201).json({
+  Activity.create(req.body)
+    .then((activities) => res.status(201).json({
       status: 'Success',
-      data: {
-        title: a.title,
-        email: a.email,
-      },
+      message: 'Success',
+      data: activities,
     }))
     .catch((err) => res.status(400).json(err));
 };
 
 const detail = async (req, res) => {
-  const activity = await Activity.findOne({
-    where: {
-      id: req.params.id,
-    },
-    attributes: ['id', 'title', 'created_at'],
-    include: [{
-      model: Todo,
-      as: 'todo-items',
-      attributes: ['id', 'title', 'activity_group_id', 'is_active', 'priority'],
-    }],
-  });
+  const activity = await Activity.findByPk(req.params.id);
   if (!activity) {
     return res.status(404).json({
       status: 'Not Found',
@@ -67,23 +39,16 @@ const detail = async (req, res) => {
   }
   return res.status(200).json({
     status: 'Success',
-    data: {
-      id: activity.id,
-      title: activity.title,
-    },
+    message: 'Success',
+    data: activity,
   });
 };
 
 const remove = async (req, res) => {
-  let { id } = req.params;
-  if (req.query.id) {
-    const queryId = req.query.id;
-    id = queryId.split(',');
-  }
   try {
     const activity = await Activity.destroy({
       where: {
-        id,
+        id: req.params.id,
       },
     });
     if (!activity) {
@@ -94,40 +59,48 @@ const remove = async (req, res) => {
     }
     return res.status(200).json({
       status: 'Success',
+      message: 'Success',
       data: {},
     });
   } catch (err) {
     return res.status(500).json({
-      status: 'Internal Server Error',
-      message: err,
+      status: 'Error',
+      message: 'internal server error',
     });
   }
 };
 
-// eslint-disable-next-line consistent-return
 const update = async (req, res) => {
+  if (!req.body) {
+    res.json({
+      status: 'Bad Request',
+      message: 'title cannot be null',
+      data: {},
+    });
+    return;
+  }
   const activity = await Activity.findByPk(req.params.id);
   if (!activity) {
-    return res.status(404).json({
+    res.status(404).json({
       status: 'Not Found',
       message: `Activity with ID ${req.params.id} Not Found`,
     });
+    return;
   }
   try {
-    const updatedActivity = await activity.update({
-      title: req.body.title,
-    });
+    const updatedActivity = await activity.update(req.body);
     if (updatedActivity) {
-      return res.status(200).json({
+      res.status(200).json({
         status: 'Success',
-        data: {
-          id: updatedActivity.id,
-          title: updatedActivity.title,
-        },
+        message: 'Success',
+        data: updatedActivity,
       });
     }
   } catch (err) {
-    return res.status(400).json(err);
+    res.status(400).json({
+      status: 'Error',
+      message: 'Internal Server Error',
+    });
   }
 };
 
