@@ -1,17 +1,14 @@
+/* eslint-disable camelcase */
 const { Todo } = require('../models/index');
 
 const list = async (req, res) => {
-  let todo = [];
-  // if req.query.activity_group_id is not null find all todos with activity_group_id
+  const clause = {};
   if (req.query.activity_group_id) {
-    todo = await Todo.findAll({
-      where: {
-        activity_group_id: req.query.activity_group_id,
-      },
-    });
-  } else {
-    todo = await Todo.findAll();
+    clause.activity_group_id = req.query.activity_group_id;
   }
+  const todo = await Todo.findAll({
+    where: clause,
+  });
   if (todo) {
     res.json({
       status: 'Success',
